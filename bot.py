@@ -12,9 +12,9 @@ from pipecat.frames.frames import EndFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
+from pipecat.services.google import GoogleLLMService, GoogleTTSService
+from pipecat.services.deepgram import DeepgramSTTService  
 from pipecat.transports.services.daily import DailyParams, DailyTransport
-from pipecat.services.google import GoogleTTSService
 from pipecat.vad.silero import SileroVADAnalyzer
 
 from loguru import logger as loguru_logger
@@ -58,18 +58,26 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
             )
         )
         
-        # Gemini Multimodal Live service
-        # This handles STT, LLM, and TTS all in one
-        llm = GeminiMultimodalLiveLLMService(
+        # Use separate services for STT, LLM, and TTS
+        # Note: Deepgram STT requires DEEPGRAM_API_KEY env var
+        # For now, we'll use Google's services which are simpler
+        
+        llm = GoogleLLMService(
             api_key=GOOGLE_API_KEY,
-            voice_id="Puck",  # Gemini voice
-            language=language,
+            model="gemini-pro",
         )
         
-        # Create pipeline
+        tts = GoogleTTSService(
+            api_key=GOOGLE_API_KEY,
+            language=language,
+            voice_name="en-US-Neural2-A" if language.startswith("en") else None,
+        )
+        
+        # Create pipeline with STT from Daily (built-in), LLM, and TTS
         pipeline = Pipeline([
             transport.input(),
             llm,
+            tts,
             transport.output(),
         ])
         
