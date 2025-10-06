@@ -12,8 +12,7 @@ from pipecat.frames.frames import EndFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.services.google import GoogleLLMService, GoogleTTSService
-from pipecat.services.deepgram import DeepgramSTTService
+from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecat.vad.silero import SileroVADAnalyzer
 
@@ -58,36 +57,18 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
             )
         )
         
-        # Deepgram for STT with language detection
-        deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
-        if not deepgram_api_key:
-            logger.error("DEEPGRAM_API_KEY not configured")
-            return
-            
-        stt = DeepgramSTTService(
-            api_key=deepgram_api_key,
-            language=language,
-        )
-        
-        # Google LLM
-        llm = GoogleLLMService(
+        # Gemini Live handles STT + LLM + TTS with automatic language detection
+        # This is the correct approach for multilingual support
+        llm = GeminiMultimodalLiveLLMService(
             api_key=GOOGLE_API_KEY,
-            model="gemini-pro",
+            voice_id="Puck",  # Gemini voice
+            # NO language parameter - let Gemini auto-detect
         )
         
-        # Google TTS
-        tts = GoogleTTSService(
-            api_key=GOOGLE_API_KEY,
-            language=language,
-            voice_name="en-US-Neural2-A" if language.startswith("en") else None,
-        )
-        
-        # Pipeline: Deepgram STT -> Google LLM -> Google TTS
+        # Simple pipeline: Gemini Live handles everything
         pipeline = Pipeline([
             transport.input(),
-            stt,
-            llm,
-            tts,
+            llm,  # Handles STT, LLM, TTS, and language detection
             transport.output(),
         ])
         
