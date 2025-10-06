@@ -12,7 +12,15 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 
-from bot import run_bot
+# Import bot module - make it optional to prevent startup failures
+try:
+    from bot import run_bot
+    BOT_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Bot module failed to import: {e}")
+    logger.warning("Server will start but /connect endpoint will be unavailable")
+    BOT_AVAILABLE = False
+    run_bot = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -134,6 +142,7 @@ async def health_check():
         "version": "1.0.0",
         "daily_api_configured": bool(DAILY_API_KEY),
         "google_api_configured": bool(os.getenv("GOOGLE_API_KEY")),
+        "bot_available": BOT_AVAILABLE,
     }
 
 
@@ -147,6 +156,11 @@ async def connect(request: ConnectRequest):
     2. Spawns a Pipecat bot that joins the room
     3. Returns room URL and client token
     """
+    
+    # Check if bot module is available
+    if not BOT_AVAILABLE:
+        logger.error("/connect called but bot module is not available")
+        raise HTTPException(500, "Bot module is not available - check server logs")
     
     try:
         logger.info(f"Creating room with language: {request.language}")
