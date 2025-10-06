@@ -159,12 +159,14 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
         logger.info("✅ Transcript processors configured")
         
         # Create pipeline - Gemini Live is end-to-end (STT+LLM+TTS)
-        # Add transcript processors to capture user and assistant transcripts
+        # CRITICAL: Must include transport.input() and transport.output() to connect to Daily
         logger.info("🔧 Creating pipeline...")
         pipeline = Pipeline([
+            transport.input(),      # Daily audio input
             transcript.user(),      # Capture user transcripts
             llm,                    # Gemini Live (handles STT, dialogue, TTS)
             transcript.assistant(), # Capture assistant transcripts
+            transport.output(),     # Daily audio output
         ])
         
         # Create task
