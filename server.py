@@ -12,19 +12,24 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 
+# Configure logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 # Import bot module - make it optional to prevent startup failures
 try:
     from bot import run_bot
     BOT_AVAILABLE = True
+    logger.info("✅ Bot module loaded successfully")
 except Exception as e:
-    logger.warning(f"Bot module failed to import: {e}")
-    logger.warning("Server will start but /connect endpoint will be unavailable")
+    logger.warning(f"⚠️  Bot module failed to import: {e}")
+    logger.warning("⚠️  Server will start but /connect endpoint will be unavailable")
     BOT_AVAILABLE = False
     run_bot = None
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Initialize FastAPI
 app = FastAPI(title="Chat-VRD Pipecat Backend")
@@ -42,12 +47,39 @@ app.add_middleware(
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
 DAILY_API_URL = "https://api.daily.co/v1"
 
+# Log environment status on startup
+logger.info(f"🔧 Daily API configured: {bool(DAILY_API_KEY)}")
+logger.info(f"🔧 Google API configured: {bool(os.getenv('GOOGLE_API_KEY'))}")
+logger.info(f"🔧 Bot module available: {BOT_AVAILABLE}")
+
 # Track active bots
 active_bots = {}
 
 
 class ConnectRequest(BaseModel):
     language: Optional[str] = "en-US"
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Run startup checks and logging"""
+    logger.info("🚀 Starting Chat-VRD Pipecat Backend...")
+    
+    # Check required environment variables
+    required_vars = ["DAILY_API_KEY"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        logger.warning(f"⚠️  Missing environment variables: {missing_vars}")
+    else:
+        logger.info("✅ All required environment variables configured")
+    
+    # Check optional variables
+    if not os.getenv("GOOGLE_API_KEY"):
+        logger.warning("⚠️  GOOGLE_API_KEY not set - bot functionality will be limited")
+    
+    logger.info(f"🌐 Server starting on port {os.getenv('PORT', '8080')}")
+    logger.info("✅ Startup complete - ready to accept connections")
 
 
 async def create_daily_room(language: str = "en-US") -> tuple[str, str, str]:
