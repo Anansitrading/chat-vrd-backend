@@ -13,7 +13,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
-from pipecat.transports.services.daily import DailyParams, DailyTransport
+from pipecat.transports.daily.transport import DailyParams, DailyTransport
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 
 from loguru import logger as loguru_logger
