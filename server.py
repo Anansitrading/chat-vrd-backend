@@ -65,6 +65,13 @@ async def startup_event():
     """Run startup checks and logging"""
     logger.info("🚀 Starting Chat-VRD Pipecat Backend...")
     
+    # CRITICAL: Log the PORT environment variable for debugging
+    port = os.getenv('PORT')
+    logger.info(f"🔧 PORT environment variable: {port}")
+    if not port:
+        logger.warning("⚠️  WARNING: PORT environment variable is NOT SET!")
+        logger.warning("⚠️  Railway requires $PORT to be set for routing")
+    
     # Check required environment variables
     required_vars = ["DAILY_API_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
@@ -78,7 +85,6 @@ async def startup_event():
     if not os.getenv("GOOGLE_API_KEY"):
         logger.warning("⚠️  GOOGLE_API_KEY not set - bot functionality will be limited")
     
-    logger.info(f"🌐 Server starting on port {os.getenv('PORT', '8080')}")
     logger.info("✅ Startup complete - ready to accept connections")
 
 
