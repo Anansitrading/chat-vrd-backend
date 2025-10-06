@@ -11,6 +11,3 @@ loguru==0.7.3
 # Let pip resolve compatible versions for these
 aiohttp
 google-genai
-
-# Deepgram for language detection and STT
-deepgram-sdk>=3.0.0

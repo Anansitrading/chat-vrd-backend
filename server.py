@@ -7,7 +7,7 @@ import os
 import asyncio
 import aiohttp
 import time
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -32,19 +32,6 @@ except Exception as e:
     BOT_AVAILABLE = False
     run_bot = None
 
-# Import language detection module
-try:
-    from language_detection import (
-        detect_language_from_audio,
-        get_audio_bytes_from_request,
-        LanguageDetectionResponse
-    )
-    LANGUAGE_DETECTION_AVAILABLE = True
-    logger.info("✅ Language detection module loaded")
-except Exception as e:
-    logger.warning(f"⚠️  Language detection module failed to import: {e}")
-    LANGUAGE_DETECTION_AVAILABLE = False
-
 # Initialize FastAPI
 app = FastAPI(title="Chat-VRD Pipecat Backend")
 
@@ -64,9 +51,7 @@ DAILY_API_URL = "https://api.daily.co/v1"
 # Log environment status on startup
 logger.info(f"🔧 Daily API configured: {bool(DAILY_API_KEY)}")
 logger.info(f"🔧 Google API configured: {bool(os.getenv('GOOGLE_API_KEY'))}")
-logger.info(f"🔧 Deepgram API configured: {bool(os.getenv('DEEPGRAM_API_KEY'))}")
 logger.info(f"🔧 Bot module available: {BOT_AVAILABLE}")
-logger.info(f"🔧 Language detection available: {LANGUAGE_DETECTION_AVAILABLE}")
 
 # Track active bots
 active_bots = {}
@@ -254,59 +239,6 @@ async def connect(request: ConnectRequest):
         raise HTTPException(500, f"Failed to create connection: {str(e)}")
 
 
-@app.post("/detect-language", response_model=LanguageDetectionResponse)
-async def detect_language(
-    file: Optional[UploadFile] = File(None),
-    base64_audio: Optional[str] = None,
-):
-    """
-    Detect language from audio sample using Deepgram
-    
-    Accepts either:
-    - Multipart file upload (file parameter)
-    - JSON with base64_audio field
-    
-    Returns detected language (BCP-47 format) with confidence and telemetry.
-    Completes in ≤300ms or returns 504 timeout error.
-    """
-    if not LANGUAGE_DETECTION_AVAILABLE:
-        logger.error("/detect-language called but module not available")
-        raise HTTPException(
-            status_code=503,
-            detail="Language detection service unavailable"
-        )
-    
-    try:
-        # Extract audio data
-        audio_data, mime_type = await get_audio_bytes_from_request(
-            file=file,
-            base64_audio=base64_audio
-        )
-        
-        # Detect language with 300ms timeout
-        result = await detect_language_from_audio(
-            audio_data=audio_data,
-            mime_type=mime_type,
-            timeout_ms=300
-        )
-        
-        logger.info(
-            f"Language detection completed: {result.detected_language} "
-            f"({result.duration_ms:.1f}ms)"
-        )
-        
-        return result
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in /detect-language: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal error: {str(e)}"
-        )
-
-
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -315,7 +247,6 @@ async def root():
         "endpoints": {
             "health": "/health",
             "connect": "/connect (POST)",
-            "detect-language": "/detect-language (POST)",
         }
     }
 
