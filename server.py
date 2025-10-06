@@ -6,6 +6,7 @@ FastAPI server that creates Daily rooms and spawns Pipecat bots
 import os
 import asyncio
 import aiohttp
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -102,7 +103,7 @@ async def create_daily_room(language: str = "en-US") -> tuple[str, str, str]:
     # Create room with privacy settings
     room_config = {
         "properties": {
-            "exp": int(asyncio.get_event_loop().time()) + 3600,  # 1 hour
+            "exp": int(time.time()) + 3600,  # 1 hour from now (Unix timestamp)
             "enable_chat": True,
             "enable_screenshare": False,
             "start_video_off": True,
