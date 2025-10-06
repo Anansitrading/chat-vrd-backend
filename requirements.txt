@@ -5,5 +5,5 @@ pydantic==2.10.4
 python-dotenv==1.0.1
 
 # Pipecat and dependencies
-pipecat-ai[daily,google]==0.0.61
+pipecat-ai[daily,google]>=0.0.50
 loguru==0.7.3
