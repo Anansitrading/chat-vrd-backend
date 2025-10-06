@@ -13,6 +13,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.services.google import GoogleLLMService, GoogleTTSService
+from pipecat.services.deepgram import DeepgramSTTService
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecat.vad.silero import SileroVADAnalyzer
 
@@ -57,24 +58,34 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
             )
         )
         
-        # Use separate services for STT, LLM, and TTS
-        # Note: Deepgram STT requires DEEPGRAM_API_KEY env var
-        # For now, we'll use Google's services which are simpler
+        # Deepgram for STT with language detection
+        deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
+        if not deepgram_api_key:
+            logger.error("DEEPGRAM_API_KEY not configured")
+            return
+            
+        stt = DeepgramSTTService(
+            api_key=deepgram_api_key,
+            language=language,
+        )
         
+        # Google LLM
         llm = GoogleLLMService(
             api_key=GOOGLE_API_KEY,
             model="gemini-pro",
         )
         
+        # Google TTS
         tts = GoogleTTSService(
             api_key=GOOGLE_API_KEY,
             language=language,
             voice_name="en-US-Neural2-A" if language.startswith("en") else None,
         )
         
-        # Create pipeline with STT from Daily (built-in), LLM, and TTS
+        # Pipeline: Deepgram STT -> Google LLM -> Google TTS
         pipeline = Pipeline([
             transport.input(),
+            stt,
             llm,
             tts,
             transport.output(),
