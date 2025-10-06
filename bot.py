@@ -13,7 +13,6 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.services.google import GoogleLLMService, GoogleTTSService
-from pipecat.services.deepgram import DeepgramSTTService  
 from pipecat.transports.services.daily import DailyParams, DailyTransport
 from pipecat.vad.silero import SileroVADAnalyzer
 
@@ -54,7 +53,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
                 camera_out_enabled=False,
                 vad_enabled=True,
                 vad_analyzer=SileroVADAnalyzer(),
-                transcription_enabled=False,  # We handle transcription via Gemini
+                transcription_enabled=True,  # Use Daily's built-in transcription
             )
         )
         
