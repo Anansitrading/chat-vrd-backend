@@ -32,7 +32,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
     Args:
         room_url: Daily room URL to join
         token: Daily auth token
-        language: Language code for STT/TTS (e.g., "en-US", "nl-NL")
+        language: Language code for STT/TTS in BCP-47 format (e.g., "en-US", "nl-NL")
     """
     
     if not GOOGLE_API_KEY:
@@ -57,12 +57,23 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
             )
         )
         
-        # Gemini Live handles STT + LLM + TTS with automatic language detection
-        # This is the correct approach for multilingual support
+        # Configure Gemini Live with detected language from Deepgram
+        # This ensures proper STT/TTS in the user's language
         llm = GeminiMultimodalLiveLLMService(
             api_key=GOOGLE_API_KEY,
             voice_id="Puck",  # Gemini voice
-            # NO language parameter - let Gemini auto-detect
+            # Configure speech with detected language
+            speech_config={
+                "language_code": language,  # BCP-47 code from Deepgram detection
+                "voice_config": {
+                    "prebuilt_voice_config": {
+                        "voice_name": "Puck"
+                    }
+                }
+            },
+            # Enable input/output transcription for proper language handling
+            input_audio_transcription={},
+            output_audio_transcription={},
         )
         
         # Simple pipeline: Gemini Live handles everything
