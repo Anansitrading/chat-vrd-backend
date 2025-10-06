@@ -20,13 +20,18 @@ logger = logging.getLogger(__name__)
 logger.info("🚀 Initializing Pipecat bot module...")
 
 try:
-    from pipecat.frames.frames import EndFrame
+    from pipecat.frames.frames import EndFrame, TranscriptionFrame, TranscriptionMessage
     from pipecat.pipeline.pipeline import Pipeline
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
     from pipecat.transports.daily.transport import DailyParams, DailyTransport
     from pipecat.audio.vad.silero import SileroVADAnalyzer
+    from pipecat.processors.transcript_processor import (
+        TranscriptProcessor,
+        UserTranscriptProcessor,
+        AssistantTranscriptProcessor
+    )
     logger.info("✅ Pipecat modules loaded successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import Pipecat modules: {e}")
@@ -39,6 +44,32 @@ logger = logging.getLogger(__name__)
 
 # Get API keys from environment
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+
+def get_voice_for_language(language: str = "en-US") -> str:
+    """
+    Get appropriate Gemini voice ID for language
+    
+    Args:
+        language: BCP-47 language code (e.g., "en-US", "nl-NL")
+    
+    Returns:
+        Gemini voice ID string
+    """
+    # Map language codes to Gemini Live voices
+    # https://ai.google.dev/gemini-api/docs/models/gemini-v2
+    voice_map = {
+        "en-US": "Puck",  # English (US) - default
+        "en-GB": "Charon",  # English (UK)
+        "nl-NL": "Aoede",  # Dutch
+        "es-ES": "Fenrir",  # Spanish
+        "fr-FR": "Kore",  # French
+        "de-DE": "Orbit",  # German
+        "it-IT": "Puck",  # Italian (using default)
+        "pt-BR": "Puck",  # Portuguese (using default)
+    }
+    
+    return voice_map.get(language, "Puck")  # Default to Puck
 
 
 async def run_bot(room_url: str, token: str, language: str = "en-US"):
@@ -94,9 +125,47 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
         )
         logger.info("✅ Gemini Live service configured")
         
-        # Create pipeline - simple STT -> LLM -> TTS
+        # Create transcript processors for user and bot transcripts
+        logger.info("📝 Setting up transcript processors...")
+        transcript = TranscriptProcessor()
+        
+        # Register transcript update handlers to send Daily app messages
+        @transcript.event_handler("on_transcript_update")
+        async def on_transcript_update(processor, frame):
+            """Send transcript updates to frontend via Daily app messages"""
+            for message in frame.messages:
+                # Determine if this is user or assistant transcript
+                is_final = True  # TranscriptionMessage from processors are final
+                
+                app_message = {
+                    "type": "UserTranscript" if message.role == "user" else "BotTranscript",
+                    "role": message.role,
+                    "text": message.content,
+                    "isFinal": is_final,
+                    "timestamp": message.timestamp,
+                    "userId": getattr(message, 'user_id', None)
+                }
+                
+                logger.info(
+                    f"📤 Sending transcript: {message.role} - "
+                    f"{message.content[:50]}{'...' if len(message.content) > 50 else ''}"
+                )
+                
+                try:
+                    await transport.send_app_message(app_message)
+                except Exception as e:
+                    logger.error(f"❌ Failed to send app message: {e}")
+        
+        logger.info("✅ Transcript processors configured")
+        
+        # Create pipeline - Gemini Live is end-to-end (STT+LLM+TTS)
+        # Add transcript processors to capture user and assistant transcripts
         logger.info("🔧 Creating pipeline...")
-        pipeline = Pipeline([llm])
+        pipeline = Pipeline([
+            transcript.user(),      # Capture user transcripts
+            llm,                    # Gemini Live (handles STT, dialogue, TTS)
+            transcript.assistant(), # Capture assistant transcripts
+        ])
         
         # Create task
         task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
