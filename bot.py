@@ -194,39 +194,20 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
                     if isinstance(msg, TranscriptionMessage):
                         logger.info(f"📝 Transcript [{msg.role}]: {msg.content}")
                         
-                        # Send to frontend via Daily app message
-                        await transport.send_app_message(
-                            {
+                        # Send to frontend via Daily app message using the internal Daily call object
+                        if hasattr(transport, '_call') and transport._call:
+                            message_data = {
                                 "type": "transcript",
                                 "text": msg.content,
                                 "speaker": msg.role,  # "user" or "assistant"
                                 "timestamp": msg.timestamp
-                            },
-                            None  # Send to all participants
-                        )
-                        logger.info(f"✅ Sent transcript to frontend: [{msg.role}] {msg.content[:50]}...")
+                            }
+                            await transport._call.sendAppMessage(message_data)
+                            logger.info(f"✅ Sent transcript to frontend: [{msg.role}] {msg.content[:50]}...")
+                        else:
+                            logger.error("❌ Transport _call not available yet")
             except Exception as e:
                 logger.error(f"❌ Error forwarding transcript: {e}", exc_info=True)
-        
-        # ALSO listen to Gemini's transcription events directly
-        @llm.event_handler("on_transcription_update")
-        async def on_gemini_transcription(service, transcription):
-            """Capture transcriptions directly from Gemini service"""
-            try:
-                logger.info(f"🎤 Gemini transcription: {transcription}")
-                # Forward to frontend
-                await transport.send_app_message(
-                    {
-                        "type": "transcript",
-                        "text": transcription.get("text", ""),
-                        "speaker": transcription.get("role", "user"),
-                        "timestamp": transcription.get("timestamp")
-                    },
-                    None
-                )
-                logger.info(f"✅ Forwarded Gemini transcript to frontend")
-            except Exception as e:
-                logger.error(f"❌ Error handling Gemini transcription: {e}", exc_info=True)
         
         logger.info("🎯 Event handlers configured")
         
