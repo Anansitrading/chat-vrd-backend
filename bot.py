@@ -151,7 +151,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
         
         # Event handlers
         @transport.event_handler("on_joined")
-        async def on_joined(transport):
+        async def on_joined(transport, event):
             logger.info("✅ Bot has joined the Daily room!")
             # Signal to /connect endpoint that bot is ready
             if ready_event:
