@@ -35,11 +35,11 @@ except Exception as e:
 # Initialize FastAPI
 app = FastAPI(title="Chat-VRD Pipecat Backend")
 
-# CORS middleware
+# CORS middleware - Fixed: allow_origins=["*"] cannot be used with allow_credentials=True
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # Changed to False to allow wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -60,6 +60,7 @@ bot_ready_events = {}
 
 class ConnectRequest(BaseModel):
     language: Optional[str] = "en-US"
+    voice_id: Optional[str] = None
 
 
 @app.on_event("startup")
@@ -216,9 +217,9 @@ async def connect(request: ConnectRequest):
         bot_ready_events[room_name] = ready_event
         
         # CRITICAL: Spawn bot task to join the room
-        logger.info(f"Spawning bot for room: {room_name}")
+        logger.info(f"Spawning bot for room: {room_name} with voice: {request.voice_id or 'auto'}")
         bot_task = asyncio.create_task(
-            run_bot(room_url, bot_token, request.language, ready_event)
+            run_bot(room_url, bot_token, request.language, ready_event, request.voice_id)
         )
         
         # Track the bot task

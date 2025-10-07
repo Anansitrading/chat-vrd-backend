@@ -39,6 +39,16 @@ except ImportError as e:
 # Get API keys from environment
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Complete list of 30 available Gemini voices from official documentation
+# https://ai.google.dev/gemini-api/docs/speech-generation#voices
+GEMINI_VOICES = [
+    "Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Aoede",
+    "Callirrhoe", "Autonoe", "Enceladus", "Iapetus", "Umbriel", "Algieba",
+    "Despina", "Erinome", "Algenib", "Rasalgethi", "Laomedeia", "Achernar",
+    "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Zubenelgenubi",
+    "Vindemiatrix", "Sadachbia", "Sadaltager", "Sulafat"
+]
+
 
 def get_voice_for_language(language: str = "en-US") -> str:
     """
@@ -66,7 +76,7 @@ def get_voice_for_language(language: str = "en-US") -> str:
     return voice_map.get(language, "Puck")  # Default to Puck
 
 
-async def run_bot(room_url: str, token: str, language: str = "en-US", ready_event: asyncio.Event = None):
+async def run_bot(room_url: str, token: str, language: str = "en-US", ready_event: asyncio.Event = None, voice_id: str = None):
     """
     Run the Pipecat bot in a Daily room
     
@@ -75,6 +85,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
         token: Daily auth token
         language: Language code for voice selection in BCP-47 format (e.g., "en-US", "nl-NL")
         ready_event: Optional event to signal when bot has joined the room
+        voice_id: Optional specific voice ID to use (overrides language-based selection)
     """
     logger.info(f"🤖 Starting bot for room: {room_url}")
     logger.info(f"🌐 Language: {language}")
@@ -86,9 +97,12 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
     logger.info("🔑 Google API key configured")
     
     try:
-        # Configure language-specific voice
-        voice_id = get_voice_for_language(language)
-        logger.info(f"🎤 Selected Gemini voice: {voice_id}")
+        # Configure voice - use provided voice_id or get language-specific voice
+        if voice_id is None:
+            voice_id = get_voice_for_language(language)
+            logger.info(f"🎤 Auto-selected Gemini voice for {language}: {voice_id}")
+        else:
+            logger.info(f"🎤 Using requested Gemini voice: {voice_id}")
         
         # Daily transport configuration - minimal params
         # Gemini Live handles STT/TTS/VAD internally
