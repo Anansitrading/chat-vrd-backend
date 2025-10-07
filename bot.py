@@ -65,7 +65,7 @@ def get_voice_for_language(language: str = "en-US") -> str:
     return voice_map.get(language, "Puck")  # Default to Puck
 
 
-async def run_bot(room_url: str, token: str, language: str = "en-US"):
+async def run_bot(room_url: str, token: str, language: str = "en-US", ready_event: asyncio.Event = None):
     """
     Run the Pipecat bot in a Daily room
     
@@ -73,6 +73,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
         room_url: Daily room URL to join
         token: Daily auth token
         language: Language code for voice selection in BCP-47 format (e.g., "en-US", "nl-NL")
+        ready_event: Optional event to signal when bot has joined the room
     """
     logger.info(f"🤖 Starting bot for room: {room_url}")
     logger.info(f"🌐 Language: {language}")
@@ -149,6 +150,14 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
         logger.info("✅ Pipeline task created")
         
         # Event handlers
+        @transport.event_handler("on_joined")
+        async def on_joined(transport):
+            logger.info("✅ Bot has joined the Daily room!")
+            # Signal to /connect endpoint that bot is ready
+            if ready_event:
+                ready_event.set()
+                logger.info("📡 Signaled ready_event - /connect can now return")
+        
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport, participant):
             logger.info(f"👤 First participant joined: {participant['id']}")

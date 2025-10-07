@@ -53,8 +53,9 @@ logger.info(f"🔧 Daily API configured: {bool(DAILY_API_KEY)}")
 logger.info(f"🔧 Google API configured: {bool(os.getenv('GOOGLE_API_KEY'))}")
 logger.info(f"🔧 Bot module available: {BOT_AVAILABLE}")
 
-# Track active bots
+# Track active bots and their ready events
 active_bots = {}
+bot_ready_events = {}
 
 
 class ConnectRequest(BaseModel):
@@ -210,10 +211,14 @@ async def connect(request: ConnectRequest):
         # Extract room name
         room_name = room_url.split("/")[-1]
         
+        # Create event to signal when bot is ready
+        ready_event = asyncio.Event()
+        bot_ready_events[room_name] = ready_event
+        
         # CRITICAL: Spawn bot task to join the room
         logger.info(f"Spawning bot for room: {room_name}")
         bot_task = asyncio.create_task(
-            run_bot(room_url, bot_token, request.language)
+            run_bot(room_url, bot_token, request.language, ready_event)
         )
         
         # Track the bot task
@@ -223,11 +228,16 @@ async def connect(request: ConnectRequest):
         def cleanup_task(task):
             if room_name in active_bots:
                 del active_bots[room_name]
-                logger.info(f"Bot task cleaned up for room: {room_name}")
+            if room_name in bot_ready_events:
+                del bot_ready_events[room_name]
+            logger.info(f"Bot task cleaned up for room: {room_name}")
         
         bot_task.add_done_callback(cleanup_task)
         
-        logger.info(f"Bot spawned successfully for room: {room_name}")
+        logger.info(f"Waiting for bot to join room: {room_name}")
+        # Wait for bot to signal it has joined the Daily room
+        await asyncio.wait_for(ready_event.wait(), timeout=10.0)
+        logger.info(f"Bot successfully joined room: {room_name}")
         
         return {
             "room_url": room_url,
