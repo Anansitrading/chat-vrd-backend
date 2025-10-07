@@ -23,13 +23,14 @@ logger = logging.getLogger(__name__)
 logger.info("🚀 Initializing Pipecat bot module...")
 
 try:
-    from pipecat.frames.frames import EndFrame
+    from pipecat.frames.frames import EndFrame, TranscriptionMessage
     from pipecat.pipeline.pipeline import Pipeline
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
     from pipecat.transports.services.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+    from pipecat.processors.transcript_processor import TranscriptProcessor
     logger.info("✅ Pipecat modules loaded successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import Pipecat modules: {e}")
@@ -127,13 +128,20 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
         context_aggregator = llm.create_context_aggregator(context)
         logger.info("✅ Context aggregator configured")
         
-        # Create pipeline - CORRECT pattern from official example
+        # Create transcript processor to capture and forward transcriptions
+        logger.info("📝 Setting up transcript processor...")
+        transcript = TranscriptProcessor()
+        logger.info("✅ Transcript processor configured")
+        
+        # Create pipeline - WITH transcript processors
         logger.info("🔧 Creating pipeline...")
         pipeline = Pipeline([
             transport.input(),              # Daily audio input
             context_aggregator.user(),      # User context
+            transcript.user(),              # Capture user transcripts
             llm,                            # Gemini Live (STT+LLM+TTS)
             transport.output(),             # Daily audio output
+            transcript.assistant(),         # Capture bot transcripts
             context_aggregator.assistant(), # Assistant context
         ])
         logger.info("✅ Pipeline created")
@@ -174,6 +182,28 @@ async def run_bot(room_url: str, token: str, language: str = "en-US", ready_even
             logger.info(f"📞 Call state updated: {state}")
             if state == "left":
                 await task.queue_frame(EndFrame())
+        
+        # Register event handler to forward transcripts to frontend
+        @transcript.event_handler("on_transcript_update")
+        async def on_transcript_update(processor, frame):
+            """Forward transcript updates to Daily frontend via app messages"""
+            try:
+                for msg in frame.messages:
+                    if isinstance(msg, TranscriptionMessage):
+                        logger.info(f"📝 Transcript [{msg.role}]: {msg.content}")
+                        
+                        # Send to frontend via Daily app message
+                        await transport.send_app_message(
+                            {
+                                "type": "transcript",
+                                "text": msg.content,
+                                "speaker": msg.role,  # "user" or "assistant"
+                                "timestamp": msg.timestamp
+                            },
+                            None  # Send to all participants
+                        )
+            except Exception as e:
+                logger.error(f"Error forwarding transcript: {e}")
         
         logger.info("🎯 Event handlers configured")
         
