@@ -1,6 +1,9 @@
 """
 Chat-VRD Pipecat Bot
 Connects to Daily room and uses Gemini Live for conversation
+
+Based on official Pipecat example:
+https://github.com/pipecat-ai/pipecat/blob/main/examples/foundational/26b-gemini-multimodal-live-function-calling.py
 """
 
 import os
@@ -20,27 +23,17 @@ logger = logging.getLogger(__name__)
 logger.info("🚀 Initializing Pipecat bot module...")
 
 try:
-    from pipecat.frames.frames import EndFrame, TranscriptionFrame, TranscriptionMessage
+    from pipecat.frames.frames import EndFrame
     from pipecat.pipeline.pipeline import Pipeline
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
-    from pipecat.transports.daily.transport import DailyParams, DailyTransport
-    from pipecat.audio.vad.silero import SileroVADAnalyzer
-    from pipecat.processors.transcript_processor import (
-        TranscriptProcessor,
-        UserTranscriptProcessor,
-        AssistantTranscriptProcessor
-    )
+    from pipecat.transports.services.daily import DailyParams, DailyTransport
+    from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
     logger.info("✅ Pipecat modules loaded successfully")
 except ImportError as e:
     logger.error(f"❌ Failed to import Pipecat modules: {e}")
     raise
-
-from loguru import logger as loguru_logger
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 # Get API keys from environment
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -79,7 +72,7 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
     Args:
         room_url: Daily room URL to join
         token: Daily auth token
-        language: Language code for STT/TTS in BCP-47 format (e.g., "en-US", "nl-NL")
+        language: Language code for voice selection in BCP-47 format (e.g., "en-US", "nl-NL")
     """
     logger.info(f"🤖 Starting bot for room: {room_url}")
     logger.info(f"🌐 Language: {language}")
@@ -91,94 +84,76 @@ async def run_bot(room_url: str, token: str, language: str = "en-US"):
     logger.info("🔑 Google API key configured")
     
     try:
-        logger.info(f"Bot starting for room: {room_url} with language: {language}")
-        
         # Configure language-specific voice
         voice_id = get_voice_for_language(language)
-        logger.info(f"🎤 Selected voice: {voice_id}")
+        logger.info(f"🎤 Selected Gemini voice: {voice_id}")
         
-        # Daily transport configuration
+        # Daily transport configuration - minimal params
+        # Gemini Live handles STT/TTS/VAD internally
         logger.info("📡 Configuring Daily transport...")
         transport = DailyTransport(
             room_url,
             token,
             "Chat-VRD Bot",
             DailyParams(
-                api_key=os.getenv("DAILY_API_KEY"),
                 audio_in_enabled=True,
                 audio_out_enabled=True,
-                camera_out_enabled=True,
-                vad_enabled=True,
-                vad_analyzer=SileroVADAnalyzer(),
-                transcription_enabled=True,
-                vad_audio_passthrough=True,
+                # Don't enable VAD/transcription - Gemini handles this
             )
         )
         logger.info("✅ Daily transport configured")
         
-        # Configure Gemini Live service
+        # Configure Gemini Live service with transcription enabled
         logger.info("🧠 Configuring Gemini Live service...")
         llm = GeminiMultimodalLiveLLMService(
             api_key=GOOGLE_API_KEY,
             voice_id=voice_id,
-            system_instruction="You are a helpful voice assistant. Keep responses concise and natural."
+            system_instruction="You are a helpful voice assistant. Keep responses concise and natural.",
+            transcribe_user_audio=True,  # Enable user transcription
+            transcribe_model_audio=True,  # Enable bot transcription
         )
         logger.info("✅ Gemini Live service configured")
         
-        # Create transcript processors for user and bot transcripts
-        logger.info("📝 Setting up transcript processors...")
-        transcript = TranscriptProcessor()
+        # Create context and aggregator (REQUIRED for Gemini Live)
+        logger.info("📝 Setting up context aggregator...")
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful voice assistant. Keep responses concise and natural."
+            }
+        ]
+        context = OpenAILLMContext(messages)
+        context_aggregator = llm.create_context_aggregator(context)
+        logger.info("✅ Context aggregator configured")
         
-        # Register transcript update handlers to send Daily app messages
-        @transcript.event_handler("on_transcript_update")
-        async def on_transcript_update(processor, frame):
-            """Send transcript updates to frontend via Daily app messages"""
-            for message in frame.messages:
-                # Determine if this is user or assistant transcript
-                is_final = True  # TranscriptionMessage from processors are final
-                
-                app_message = {
-                    "type": "UserTranscript" if message.role == "user" else "BotTranscript",
-                    "role": message.role,
-                    "text": message.content,
-                    "isFinal": is_final,
-                    "timestamp": message.timestamp,
-                    "userId": getattr(message, 'user_id', None)
-                }
-                
-                logger.info(
-                    f"📤 Sending transcript: {message.role} - "
-                    f"{message.content[:50]}{'...' if len(message.content) > 50 else ''}"
-                )
-                
-                try:
-                    await transport.send_app_message(app_message)
-                except Exception as e:
-                    logger.error(f"❌ Failed to send app message: {e}")
-        
-        logger.info("✅ Transcript processors configured")
-        
-        # Create pipeline - Gemini Live is end-to-end (STT+LLM+TTS)
-        # CRITICAL: Must include transport.input() and transport.output() to connect to Daily
+        # Create pipeline - CORRECT pattern from official example
         logger.info("🔧 Creating pipeline...")
         pipeline = Pipeline([
-            transport.input(),      # Daily audio input
-            transcript.user(),      # Capture user transcripts
-            llm,                    # Gemini Live (handles STT, dialogue, TTS)
-            transcript.assistant(), # Capture assistant transcripts
-            transport.output(),     # Daily audio output
+            transport.input(),              # Daily audio input
+            context_aggregator.user(),      # User context
+            llm,                            # Gemini Live (STT+LLM+TTS)
+            transport.output(),             # Daily audio output
+            context_aggregator.assistant(), # Assistant context
         ])
+        logger.info("✅ Pipeline created")
         
         # Create task
-        task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
+        task = PipelineTask(
+            pipeline,
+            params=PipelineParams(
+                allow_interruptions=True,
+                enable_metrics=True,
+                enable_usage_metrics=True,
+            )
+        )
         logger.info("✅ Pipeline task created")
         
         # Event handlers
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport, participant):
             logger.info(f"👤 First participant joined: {participant['id']}")
-            await transport.capture_participant_transcription(participant["id"])
-            await task.queue_frames([llm.get_initialization_frame()])
+            # Kick off conversation
+            await task.queue_frames([context_aggregator.user().get_context_frame()])
         
         @transport.event_handler("on_participant_left")
         async def on_participant_left(transport, participant, reason):
