@@ -9,7 +9,7 @@ Tested and verified: 2025-01-08
 # Only gemini-2.0-flash-exp actually supports bidiGenerateContent
 # All other models FAIL despite what documentation says
 WORKING_MODELS = {
-    "models/gemini-2.0-flash-exp": {
+    "gemini-2.0-flash-exp": {
         "name": "Gemini 2.0 Flash Exp",
         "type": "native-audio",
         "description": "✅ ONLY MODEL THAT WORKS - Verified via API",

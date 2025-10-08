@@ -129,9 +129,11 @@ async def run_bot(
             system_instruction = f"""You are a helpful voice assistant using the {voice_id} voice. 
             Keep responses concise and natural."""
         
+        # Add models/ prefix if not present (required by Gemini API)
+        gemini_model = f"models/{model_id}" if not model_id.startswith("models/") else model_id
         llm = GeminiMultimodalLiveLLMService(
             api_key=GOOGLE_API_KEY,
-            model=model_id,  # Use the selected model
+            model=gemini_model,  # Use the selected model with models/ prefix
             voice_id=voice_id,  # Use the validated voice
             system_instruction=system_instruction,
             transcribe_user_audio=True,  # Enable user transcription

@@ -147,9 +147,11 @@ async def run_bot(
             
             # Configure Gemini WITHOUT TTS (only STT + LLM)
             logger.info("🧠 Configuring Gemini for STT + LLM (no TTS)...")
+            # Add models/ prefix if not present (required by Gemini API)
+            gemini_model = f"models/{model_id}" if not model_id.startswith("models/") else model_id
             llm = GeminiMultimodalLiveLLMService(
                 api_key=GOOGLE_API_KEY,
-                model=model_id,
+                model=gemini_model,
                 voice_id=None,  # DISABLE Gemini TTS
                 system_instruction=system_instruction,
                 transcribe_user_audio=True,
@@ -196,9 +198,11 @@ async def run_bot(
             logger.info(f"🎤 Using Gemini voice: {voice_id}")
             
             # Configure Gemini with TTS
+            # Add models/ prefix if not present (required by Gemini API)
+            gemini_model = f"models/{model_id}" if not model_id.startswith("models/") else model_id
             llm = GeminiMultimodalLiveLLMService(
                 api_key=GOOGLE_API_KEY,
-                model=model_id,
+                model=gemini_model,
                 voice_id=voice_id,  # Use Gemini TTS
                 system_instruction=system_instruction,
                 transcribe_user_audio=True,
