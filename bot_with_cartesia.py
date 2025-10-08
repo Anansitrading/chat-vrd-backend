@@ -22,7 +22,7 @@ try:
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     from pipecat.services.google.llm import GoogleLLMService
-    from pipecat.services.google.stt import GoogleSTTService
+    from pipecat.services.deepgram.stt import DeepgramSTTService
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
     from pipecat.transports.services.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
@@ -47,6 +47,7 @@ except ImportError as e:
 # Get API keys from environment
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 
 # Cartesia Dutch voice configurations
 CARTESIA_DUTCH_VOICES = {
@@ -107,6 +108,10 @@ async def run_bot(
         logger.error("❌ GOOGLE_API_KEY not configured")
         return
     
+    if not DEEPGRAM_API_KEY:
+        logger.error("❌ DEEPGRAM_API_KEY not configured")
+        return
+    
     if use_cartesia and not CARTESIA_API_KEY:
         logger.warning("⚠️ CARTESIA_API_KEY not configured, falling back to Gemini TTS")
         use_cartesia = False
@@ -133,11 +138,15 @@ async def run_bot(
             # DUTCH: Use Google STT + Gemini LLM + Cartesia TTS
             logger.info("🎤 Configuring Cartesia TTS for Dutch...")
             
-            # Create STT service
-            stt = GoogleSTTService(
-                params=GoogleSTTService.InputParams(languages=[Language.NL]),
+            # Create Deepgram STT service with language detection
+            stt = DeepgramSTTService(
+                api_key=DEEPGRAM_API_KEY,
+                model="nova-3",  # Latest Deepgram model
+                language="nl",  # nl for Dutch (Deepgram uses 2-letter codes)
+                detect_language=True,  # Enable automatic language detection
+                interim_results=True,  # Get live partial transcriptions
             )
-            logger.info("✅ Google STT configured for Dutch")
+            logger.info("✅ Deepgram STT configured for Dutch with language detection")
             
             # Create Cartesia TTS service
             tts = CartesiaHttpTTSService(
@@ -168,11 +177,11 @@ async def run_bot(
             # Create transcript processor
             transcript = TranscriptProcessor()
             
-            # Build pipeline with Google STT + Gemini LLM + Cartesia TTS
-            logger.info("🔧 Creating pipeline with Google STT + Gemini LLM + Cartesia TTS...")
+            # Build pipeline with Deepgram STT + Gemini LLM + Cartesia TTS
+            logger.info("🔧 Creating pipeline with Deepgram STT + Gemini LLM + Cartesia TTS...")
             pipeline = Pipeline([
                 transport.input(),              # Daily audio input
-                stt,                           # Google STT
+                stt,                           # Deepgram STT
                 transcript.user(),              # Capture user transcripts
                 context_aggregator.user(),      # User context
                 llm,                           # Google Gemini LLM (text)
@@ -181,7 +190,7 @@ async def run_bot(
                 transcript.assistant(),        # Capture bot transcripts
                 context_aggregator.assistant(), # Assistant context
             ])
-            logger.info("✅ Pipeline created with Google STT + Gemini LLM + Cartesia TTS")
+            logger.info("✅ Pipeline created with Deepgram STT + Gemini LLM + Cartesia TTS")
             
         else:
             # OTHER LANGUAGES: Use Gemini for everything

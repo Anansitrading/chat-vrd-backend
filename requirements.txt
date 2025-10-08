@@ -4,7 +4,7 @@ pydantic>=2.10.6,<3
 python-dotenv==1.0.1
 
 # Pipecat - use latest version without pinning extras versions
-pipecat-ai[daily,google,silero,cartesia]==0.0.87
+pipecat-ai[daily,google,silero,cartesia,deepgram]==0.0.87
 onnxruntime==1.20.1
 loguru==0.7.3
 
