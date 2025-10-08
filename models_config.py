@@ -19,26 +19,18 @@ HALF_CASCADE_MODELS = {
     }
 }
 
-# Native audio models - support all 30 voices
+# NOTE: Native audio models with 30 voices are documented but not yet available via API
+# The API currently rejects model names like "gemini-2.5-flash-native-audio-preview-09-2025"
+# For now, all Live API models only support 8 voices
+# We'll keep this structure for when native audio becomes available
 NATIVE_AUDIO_MODELS = {
-    "gemini-2.5-flash-native-audio-preview-09-2025": {
-        "name": "Gemini 2.5 Flash Native Audio (09-2025)",
-        "type": "native-audio",
-        "description": "Latest native audio model with best voice quality",
-        "features": ["best_quality", "emotion_aware", "thinking", "all_voices"],
-    },
-    "gemini-2.5-flash-preview-native-audio-dialog": {
-        "name": "Gemini 2.5 Flash Native Audio Dialog",
-        "type": "native-audio",
-        "description": "Native audio optimized for conversations",
-        "features": ["dialog_optimized", "emotion_aware", "all_voices"],
-    },
-    "gemini-2.5-flash-exp-native-audio-thinking-dialog": {
-        "name": "Gemini 2.5 Flash Native Audio Thinking",
-        "type": "native-audio",
-        "description": "Experimental native audio with thinking capabilities",
-        "features": ["thinking", "dialog_optimized", "experimental", "all_voices"],
-    }
+    # These will be enabled when the API supports them:
+    # "gemini-2.5-flash-native-audio": {
+    #     "name": "Gemini 2.5 Flash Native Audio",
+    #     "type": "native-audio",
+    #     "description": "Native audio with all 30 voices (coming soon)",
+    #     "features": ["native_audio", "all_voices"],
+    # }
 }
 
 # Voice configurations
