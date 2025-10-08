@@ -24,7 +24,7 @@ try:
     from pipecat.services.google.llm import GoogleLLMService
     from pipecat.services.deepgram.stt import DeepgramSTTService
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
-    from pipecat.transports.services.daily import DailyParams, DailyTransport
+    from pipecat.transports.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
     from pipecat.processors.transcript_processor import TranscriptProcessor
     from pipecat.transcriptions.language import Language
@@ -138,15 +138,31 @@ async def run_bot(
             # DUTCH: Use Google STT + Gemini LLM + Cartesia TTS
             logger.info("🎤 Configuring Cartesia TTS for Dutch...")
             
-            # Create Deepgram STT service with language detection
-            stt = DeepgramSTTService(
-                api_key=DEEPGRAM_API_KEY,
-                model="nova-3",  # Latest Deepgram model
-                language="nl",  # nl for Dutch (Deepgram uses 2-letter codes)
-                detect_language=True,  # Enable automatic language detection
-                interim_results=True,  # Get live partial transcriptions
-            )
-            logger.info("✅ Deepgram STT configured for Dutch with language detection")
+            # Create Deepgram STT service with LiveOptions
+            try:
+                from deepgram import LiveOptions
+                live_options = LiveOptions(
+                    model="nova-3",
+                    language="nl",
+                    interim_results=True,
+                    smart_format=True,
+                    punctuate=True,
+                    detect_language=True,
+                )
+                stt = DeepgramSTTService(
+                    api_key=DEEPGRAM_API_KEY,
+                    live_options=live_options,
+                )
+                logger.info("✅ Deepgram STT configured (LiveOptions: nova-3, nl, interim, smart_format, punctuate, detect_language)")
+            except Exception as e:
+                logger.warning(f"⚠️ Deepgram LiveOptions unavailable ({e}); falling back to basic Deepgram config")
+                stt = DeepgramSTTService(
+                    api_key=DEEPGRAM_API_KEY,
+                    model="nova-3",
+                    language="nl",
+                    interim_results=True,
+                )
+                logger.info("✅ Deepgram STT configured (fallback)")
             
             # Create Cartesia TTS service
             tts = CartesiaHttpTTSService(

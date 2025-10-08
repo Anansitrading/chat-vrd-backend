@@ -232,6 +232,7 @@ async def health_check():
         "daily_api_configured": bool(DAILY_API_KEY),
         "google_api_configured": bool(os.getenv("GOOGLE_API_KEY")),
         "cartesia_api_configured": bool(os.getenv("CARTESIA_API_KEY")),
+        "deepgram_api_configured": bool(os.getenv("DEEPGRAM_API_KEY")),
         "bot_available": BOT_AVAILABLE,
         "cartesia_bot_available": CARTESIA_AVAILABLE,
         "models_available": MODELS_AVAILABLE
