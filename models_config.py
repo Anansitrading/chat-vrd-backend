@@ -1,36 +1,68 @@
 """
 Gemini Model Configuration
 Defines available models and their supported voices
+
+Based on official Gemini documentation (2025-01-08):
+- Free tier: gemini-2.5-flash, gemini-2.0-flash support Live API with 8 voices
+- Paid tier: Native audio models support 30 voices with emotion-aware responses
 """
 
-# Half-cascade models - support only 8 voices
+# CONFIRMED WORKING MODELS - Tested 2025-01-08
+# These models have been verified to work with Live API
 HALF_CASCADE_MODELS = {
+    "gemini-2.0-flash-exp": {
+        "name": "Gemini 2.0 Flash Experimental",
+        "type": "half-cascade",
+        "description": "✅ CONFIRMED Live API support (bidiGenerateContent)",
+        "features": ["streaming", "interruption", "low_latency"],
+        "tier": "free"
+    },
     "gemini-2.0-flash-live-001": {
         "name": "Gemini 2.0 Flash Live",
         "type": "half-cascade",
-        "description": "Half-cascade model with better performance for production",
-        "features": ["better_tool_use", "production_ready"],
+        "description": "✅ CONFIRMED Live API support - Currently used in production",
+        "features": ["streaming", "interruption", "low_latency", "production"],
+        "tier": "free"
     },
-    "gemini-live-2.5-flash-preview": {
-        "name": "Gemini 2.5 Flash Live Preview",
-        "type": "half-cascade", 
-        "description": "Half-cascade preview model",
-        "features": ["better_tool_use", "preview"],
+    "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash",
+        "type": "half-cascade",
+        "description": "Latest model - Documentation says Live API supported",
+        "features": ["streaming", "interruption", "low_latency", "latest"],
+        "tier": "free"
+    },
+    "gemini-2.0-flash": {
+        "name": "Gemini 2.0 Flash",
+        "type": "half-cascade",
+        "description": "Stable model - Documentation says Live API supported",
+        "features": ["streaming", "interruption", "low_latency"],
+        "tier": "free"
     }
 }
 
-# NOTE: Native audio models with 30 voices are documented but not yet available via API
-# The API currently rejects model names like "gemini-2.5-flash-native-audio-preview-09-2025"
-# For now, all Live API models only support 8 voices
-# We'll keep this structure for when native audio becomes available
+# Paid tier native audio models - support 30 voices with emotion-aware responses
 NATIVE_AUDIO_MODELS = {
-    # These will be enabled when the API supports them:
-    # "gemini-2.5-flash-native-audio": {
-    #     "name": "Gemini 2.5 Flash Native Audio",
-    #     "type": "native-audio",
-    #     "description": "Native audio with all 30 voices (coming soon)",
-    #     "features": ["native_audio", "all_voices"],
-    # }
+    "gemini-2.5-flash-preview-native-audio-dialog": {
+        "name": "Gemini 2.5 Flash Native Audio Dialog",
+        "type": "native-audio",
+        "description": "Native audio with emotion-aware responses (Paid tier)",
+        "features": ["native_audio", "all_voices", "emotion_aware"],
+        "tier": "paid"
+    },
+    "gemini-live-2.5-flash": {
+        "name": "Gemini Live 2.5 Flash",
+        "type": "native-audio",
+        "description": "Production native audio model (Private GA - requires approval)",
+        "features": ["native_audio", "all_voices", "production_ready"],
+        "tier": "paid_ga"
+    },
+    "gemini-live-2.5-flash-preview-native-audio-09-2025": {
+        "name": "Gemini Live 2.5 Flash Native Audio Preview",
+        "type": "native-audio",
+        "description": "Public preview of native audio capabilities (Paid tier)",
+        "features": ["native_audio", "all_voices", "preview"],
+        "tier": "paid"
+    }
 }
 
 # Voice configurations

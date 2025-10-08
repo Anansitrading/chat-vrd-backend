@@ -33,16 +33,29 @@ except Exception as e:
     logger.warning(f"⚠️  Model configuration failed to import: {e}")
     MODELS_AVAILABLE = False
 
-# Import bot module with voice support
+# Import bot modules
 try:
-    from bot_with_model_selection import run_bot
+    from bot_with_model_selection import run_bot as run_bot_standard
     BOT_AVAILABLE = True
-    logger.info("✅ Bot module with model selection loaded successfully")
+    logger.info("✅ Standard bot module loaded")
+    
+    # Try to import Cartesia bot
+    try:
+        from bot_with_cartesia import run_bot as run_bot_cartesia
+        CARTESIA_AVAILABLE = True
+        logger.info("✅ Cartesia bot module loaded")
+    except Exception as e:
+        CARTESIA_AVAILABLE = False
+        run_bot_cartesia = None
+        logger.warning(f"⚠️ Cartesia bot not available: {e}")
+        
 except Exception as e:
-    logger.warning(f"⚠️  Bot module failed to import: {e}")
+    logger.warning(f"⚠️  Bot modules failed to import: {e}")
     logger.warning("⚠️  Server will start but /connect endpoint will be unavailable")
     BOT_AVAILABLE = False
-    run_bot = None
+    CARTESIA_AVAILABLE = False
+    run_bot_standard = None
+    run_bot_cartesia = None
 
 # Initialize FastAPI
 app = FastAPI(title="Chat-VRD Pipecat Backend with Model & Voice Selection")
@@ -215,10 +228,12 @@ async def health_check():
     return {
         "status": "ok",
         "service": "pipecat-gemini-bot-with-model-selection",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "daily_api_configured": bool(DAILY_API_KEY),
         "google_api_configured": bool(os.getenv("GOOGLE_API_KEY")),
+        "cartesia_api_configured": bool(os.getenv("CARTESIA_API_KEY")),
         "bot_available": BOT_AVAILABLE,
+        "cartesia_bot_available": CARTESIA_AVAILABLE,
         "models_available": MODELS_AVAILABLE
     }
 
@@ -352,6 +367,18 @@ async def connect(request: ConnectRequest):
         # Create event for bot readiness
         ready_event = asyncio.Event()
         bot_ready_events[room_url] = ready_event
+        
+        # Choose bot based on language
+        use_cartesia = (request.language == "nl-NL" and 
+                       os.getenv("CARTESIA_API_KEY") and 
+                       CARTESIA_AVAILABLE)
+        
+        if use_cartesia:
+            logger.info("🇳🇱 Using Cartesia bot for Dutch TTS")
+            run_bot = run_bot_cartesia
+        else:
+            logger.info("🌍 Using standard Gemini bot")
+            run_bot = run_bot_standard
         
         # Spawn bot task with selected model and voice
         bot_task = asyncio.create_task(
