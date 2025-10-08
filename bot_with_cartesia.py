@@ -25,6 +25,7 @@ try:
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
     from pipecat.transports.services.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+    from pipecat.processors.aggregators.llm_response import LLMFullResponseAggregator
     from pipecat.processors.transcript_processor import TranscriptProcessor
     from pipecat.transcriptions.language import Language
     logger.info("✅ Pipecat modules loaded successfully")
@@ -167,6 +168,10 @@ async def run_bot(
             # Create transcript processor
             transcript = TranscriptProcessor()
             
+            # Create response aggregator to buffer streaming LLM text before TTS
+            response_aggregator = LLMFullResponseAggregator()
+            logger.info("✅ Response aggregator created to buffer streaming text")
+            
             # Build pipeline with Cartesia TTS
             logger.info("🔧 Creating pipeline with Cartesia TTS...")
             pipeline = Pipeline([
@@ -174,12 +179,13 @@ async def run_bot(
                 context_aggregator.user(),      # User context
                 transcript.user(),              # Capture user transcripts
                 llm,                           # Gemini (STT+LLM only)
+                response_aggregator,           # Buffer streaming LLM text
                 tts,                           # Cartesia TTS
                 transport.output(),            # Daily audio output
                 transcript.assistant(),        # Capture bot transcripts
                 context_aggregator.assistant(), # Assistant context
             ])
-            logger.info("✅ Pipeline created with Cartesia TTS")
+            logger.info("✅ Pipeline created with Cartesia TTS and response buffering")
             
         else:
             # OTHER LANGUAGES: Use Gemini for everything
