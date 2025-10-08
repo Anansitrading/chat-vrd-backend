@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Backend Tester with Voice Selection</title>
+    <!-- Daily.co SDK -->
+    <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status.info { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; }
+        .status.error { background: #ffebee; color: #c62828; }
+        
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .badge.connected { background: #4caf50; color: white; }
+        .badge.disconnected { background: #f44336; color: white; }
+        .badge.pending { background: #ff9800; color: white; }
+        
+        .voice-selection {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .voice-selection h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .voice-dropdown {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .voice-dropdown label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .voice-dropdown select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .language-dropdown {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .language-dropdown label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .language-dropdown select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .voice-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .btn-voice { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        
+        .log {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        
+        .log-entry.log-info { border-left-color: #4299e1; }
+        .log-entry.log-success { border-left-color: #48bb78; }
+        .log-entry.log-error { border-left-color: #f56565; }
+        .log-entry.log-warning { border-left-color: #ed8936; }
+        
+        .log-time {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        audio {
+            width: 100%;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .transcript-box {
+            background: #1e1e1e;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .transcript-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        #transcripts {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        #transcripts:empty::before {
+            content: 'Waiting for transcripts...';
+            color: #888;
+            font-style: italic;
+        }
+        
+        .transcript-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .transcript-entry.user {
+            border-left-color: #2196f3;
+        }
+        
+        .transcript-entry.bot {
+            border-left-color: #4caf50;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .transcript-user {
+            color: #64b5f6;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .transcript-bot {
+            color: #81c784;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .transcript-text {
+            color: #e0e0e0;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚂 Railway Backend Tester with Voice Selection</h1>
+        <p class="subtitle">Test your Pipecat backend deployment with different Gemini voices</p>
+        
+        <div class="endpoint">
+            <strong>Backend URL:</strong><br>
+            https://chat-vrd-backend-production.up.railway.app
+        </div>
+        
+        <div id="status" class="status info">
+            Status: <span id="statusText">Ready to test</span>
+            <span id="statusBadge" class="badge disconnected">DISCONNECTED</span>
+        </div>
+        
+        <div class="voice-selection">
+            <h3>🎤 Voice & Language Settings</h3>
+            <div class="voice-controls">
+                <div class="voice-dropdown">
+                    <label for="voiceSelect">Select Voice:</label>
+                    <select id="voiceSelect">
+                        <option value="">Default (Language-based)</option>
+                        <!-- These are the ONLY voices currently supported by the backend -->
+                        <option value="Puck">Puck - Natural, friendly voice</option>
+                        <option value="Charon">Charon - Professional, clear voice</option>
+                        <option value="Kore">Kore - Warm, conversational voice</option>
+                        <option value="Fenrir">Fenrir - Deep, authoritative voice</option>
+                        <option value="Aoede">Aoede - Bright, expressive voice</option>
+                        <option value="Orbit">Orbit - Modern, dynamic voice</option>
+                        <option value="Perseus">Perseus - Strong, confident voice</option>
+                        <option value="Perse">Perse - Gentle, soothing voice</option>
+                        <option value="Io">Io - Clear, articulate voice</option>
+                    </select>
+                </div>
+                <div class="language-dropdown">
+                    <label for="languageSelect">Select Language:</label>
+                    <select id="languageSelect">
+                        <option value="en-US">English (US)</option>
+                        <option value="en-GB">English (UK)</option>
+                        <option value="nl-NL">Dutch</option>
+                        <option value="es-ES">Spanish</option>
+                        <option value="fr-FR">French</option>
+                        <option value="de-DE">German</option>
+                        <option value="it-IT">Italian</option>
+                        <option value="pt-BR">Portuguese (Brazil)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="voice-info" id="voiceInfo">
+                Select a voice to see its details
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn-info" onclick="testHealth()">
+                🏥 Test Health Check
+            </button>
+            
+            <button class="btn-info" onclick="testVoicesEndpoint()">
+                🎤 Test /voices Endpoint
+            </button>
+            
+            <button class="btn-success" onclick="testConnect()">
+                🔌 Connect with Default Voice
+            </button>
+            
+            <button class="btn-voice" onclick="testRealAudioConnection()">
+                🎭 Connect with Selected Voice
+            </button>
+            
+            <button class="btn-primary" onclick="testMultipleVoices()">
+                🗣️ Test Voice Switching Demo
+            </button>
+            
+            <button class="btn-success" onclick="testRealAudioConnection()">
+                🔊 Test REAL Audio + Bot
+            </button>
+            
+            <button class="btn-danger" onclick="disconnectAudio()" id="disconnectBtn" disabled>
+                ⏹️ Disconnect Audio
+            </button>
+            
+            <button class="btn-danger" onclick="clearLogs()">
+                🗑️ Clear Logs
+            </button>
+        </div>
+        
+        <div class="transcript-box" id="transcriptBox" style="display: none;">
+            <h3>Live Transcripts</h3>
+            <div id="transcripts"></div>
+        </div>
+        
+        <audio id="audioPlayer" controls></audio>
+        
+        <div class="log" id="log">
+            <div class="log-entry log-info">
+                Ready to test your Railway backend with voice selection...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://chat-vrd-backend-production.up.railway.app';
+        let dailyCall = null;
+        let currentRoom = null;
+        let currentVoice = null;
+        
+        // Store loaded voices information
+        let loadedVoices = {};
+        
+        // Update voice info when selection changes
+        document.getElementById('voiceSelect').addEventListener('change', (e) => {
+            const voice = e.target.value;
+            const voiceInfo = document.getElementById('voiceInfo');
+            
+            if (voice && loadedVoices[voice]) {
+                voiceInfo.innerHTML = `<strong>${loadedVoices[voice].name}:</strong> ${loadedVoices[voice].description}`;
+                currentVoice = voice;
+            } else {
+                voiceInfo.textContent = 'Using default voice based on selected language';
+                currentVoice = null;
+            }
+        });
+        
+        // Dynamically load voices from backend
+        async function loadVoicesFromBackend() {
+            log('🎤 Loading available voices from backend...', 'info');
+            try {
+                const response = await fetch(`${BACKEND_URL}/voices`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                
+                const voiceSelect = document.getElementById('voiceSelect');
+                voiceSelect.innerHTML = '<option value="">Default (Language-based)</option>';
+                
+                data.voices.forEach(voice => {
+                    loadedVoices[voice.id] = voice;
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = `${voice.name} - ${voice.description}`;
+                    voiceSelect.appendChild(option);
+                });
+                
+                log(`✅ Loaded ${data.voices.length} voices from backend`, 'success');
+                log(`   Default voice: ${data.default}`, 'info');
+            } catch (error) {
+                log(`⚠️ Could not load voices from backend: ${error.message}`, 'warning');
+                log('   Using hardcoded voice list (backend may not have /voices endpoint yet)', 'warning');
+                // Populate loadedVoices with hardcoded data as fallback
+                const fallbackVoices = {
+                    'Puck': { name: 'Puck', description: 'Natural, friendly voice' },
+                    'Charon': { name: 'Charon', description: 'Professional, clear voice' },
+                    'Kore': { name: 'Kore', description: 'Warm, conversational voice' },
+                    'Fenrir': { name: 'Fenrir', description: 'Deep, authoritative voice' },
+                    'Aoede': { name: 'Aoede', description: 'Bright, expressive voice' },
+                    'Orbit': { name: 'Orbit', description: 'Modern, dynamic voice' },
+                    'Perseus': { name: 'Perseus', description: 'Strong, confident voice' },
+                    'Perse': { name: 'Perse', description: 'Gentle, soothing voice' },
+                    'Io': { name: 'Io', description: 'Clear, articulate voice' }
+                };
+                Object.assign(loadedVoices, fallbackVoices);
+            }
+        }
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(text, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            const statusBadge = document.getElementById('statusBadge');
+            
+            statusDiv.className = `status ${type}`;
+            statusText.textContent = text;
+            
+            if (type === 'success') {
+                statusBadge.className = 'badge connected';
+                statusBadge.textContent = 'CONNECTED';
+            } else if (type === 'error') {
+                statusBadge.className = 'badge disconnected';
+                statusBadge.textContent = 'ERROR';
+            } else {
+                statusBadge.className = 'badge pending';
+                statusBadge.textContent = 'TESTING...';
+            }
+        }
+        
+        async function testHealth() {
+            log('🏥 Testing health endpoint...', 'info');
+            updateStatus('Testing health endpoint...', 'info');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                const data = await response.json();
+                
+                log('✅ Health check successful!', 'success');
+                log(`   Status: ${data.status}`, 'info');
+                log(`   Service: ${data.service}`, 'info');
+                log(`   Version: ${data.version}`, 'info');
+                log(`   Bot Available: ${data.bot_available}`, 'info');
+                log(`   Voices Available: ${data.voices_available?.join(', ') || 'None'}`, 'info');
+                
+                updateStatus('Health check passed', 'success');
+            } catch (error) {
+                log(`❌ Health check failed: ${error.message}`, 'error');
+                updateStatus('Health check failed', 'error');
+            }
+        }
+        
+        async function testVoicesEndpoint() {
+            log('🎤 Testing /voices endpoint...', 'info');
+            updateStatus('Fetching available voices...', 'info');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/voices`);
+                const data = await response.json();
+                
+                log('✅ Voices fetched successfully!', 'success');
+                log(`   Default voice: ${data.default}`, 'info');
+                log('   Available voices:', 'info');
+                
+                data.voices.forEach(voice => {
+                    log(`     • ${voice.id}: ${voice.description}`, 'info');
+                });
+                
+                updateStatus('Voices fetched successfully', 'success');
+            } catch (error) {
+                log(`❌ Failed to fetch voices: ${error.message}`, 'error');
+                updateStatus('Failed to fetch voices', 'error');
+            }
+        }
+        
+        async function testConnect() {
+            const language = document.getElementById('languageSelect').value;
+            log(`🔌 Testing /connect endpoint with language: ${language}...`, 'info');
+            updateStatus('Creating room with default voice...', 'info');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/connect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        language: language
+                    })
+                });
+                
+                const data = await response.json();
+                
+                log('✅ Connect successful!', 'success');
+                log(`   Room URL: ${data.room_url}`, 'info');
+                log(`   Language: ${data.language}`, 'info');
+                log(`   Voice: ${data.voice}`, 'info');
+                log(`   Bot Status: ${data.bot_status}`, 'info');
+                
+                currentRoom = data;
+                updateStatus('Room created with default voice', 'success');
+            } catch (error) {
+                log(`❌ Connect failed: ${error.message}`, 'error');
+                updateStatus('Connect failed', 'error');
+            }
+        }
+        
+        async function testConnectWithVoice() {
+            const language = document.getElementById('languageSelect').value;
+            const voice = document.getElementById('voiceSelect').value; // Use value directly - it's already the correct ID
+            
+            log(`🎭 Testing /connect with voice: ${voice || 'default'}, language: ${language}...`, 'info');
+            updateStatus(`Creating room with ${voice || 'default'} voice...`, 'info');
+            
+            try {
+                const body = { language: language };
+                if (voice) {
+                    body.voice_id = voice;
+                }
+                
+                const response = await fetch(`${BACKEND_URL}/connect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                
+                log('✅ Connect with voice successful!', 'success');
+                log(`   Room URL: ${data.room_url}`, 'info');
+                log(`   Language: ${data.language}`, 'info');
+                log(`   Voice: ${data.voice}`, 'info');
+                if (data.voice_info) {
+                    log(`   Voice Info: ${data.voice_info.description}`, 'info');
+                }
+                log(`   Bot Status: ${data.bot_status}`, 'info');
+                
+                currentRoom = data;
+                updateStatus(`Room created with ${voice || 'default'} voice`, 'success');
+            } catch (error) {
+                log(`❌ Connect failed: ${error.message}`, 'error');
+                updateStatus('Connect failed', 'error');
+            }
+        }
+        
+        async function testMultipleVoices() {
+            log('🗣️ Testing multiple voice demo...', 'info');
+            log('   This will create 3 rooms with different voices', 'info');
+            updateStatus('Testing multiple voices...', 'info');
+            
+            const testVoices = [
+                { voice: 'Puck', language: 'en-US' },
+                { voice: 'Charon', language: 'en-GB' },
+                { voice: 'Kore', language: 'fr-FR' }
+            ];
+            
+            for (const test of testVoices) {
+                log(`   Creating room with ${test.voice} voice (${test.language})...`, 'info');
+                
+                try {
+                    const response = await fetch(`${BACKEND_URL}/connect`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            language: test.language,
+                            voice_id: test.voice
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    log(`     ✅ Room created with ${test.voice} voice`, 'success');
+                    
+                    // Wait a bit between creations
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (error) {
+                    log(`     ❌ Failed for ${test.voice}: ${error.message}`, 'error');
+                }
+            }
+            
+            updateStatus('Multiple voice test complete', 'success');
+        }
+        
+        async function testRealAudioConnection() {
+            log('🔊 Starting REAL audio connection test...', 'info');
+            updateStatus('Starting audio test...', 'info');
+            
+            try {
+                // First create a room with selected voice
+                const language = document.getElementById('languageSelect').value;
+                const voice = document.getElementById('voiceSelect').value; // Use value directly - it's already the correct ID
+                
+                log(`   Creating room with voice: ${voice || 'default'}...`, 'info');
+                
+                const body = { language: language };
+                if (voice) {
+                    body.voice_id = voice;
+                }
+                
+                const response = await fetch(`${BACKEND_URL}/connect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                const room_url = data.room_url;
+                const token = data.token;
+                
+                log(`✅ Room created with ${voice || 'default'} voice`, 'success');
+                log(`   Room URL: ${room_url}`, 'info');
+                log(`   Voice: ${data.voice}`, 'info');
+                updateStatus('Room created, joining...', 'info');
+                
+                // Join room with Daily.co
+                log('   Joining Daily room...', 'info');
+                
+                if (dailyCall) {
+                    log('   Cleaning up previous Daily session...', 'info');
+                    try {
+                        await dailyCall.destroy();
+                    } catch (e) {
+                        log(`   Warning: Error destroying previous session: ${e.message}`, 'warning');
+                    }
+                    dailyCall = null;
+                }
+                
+                dailyCall = window.DailyIframe.createCallObject();
+                
+                // Set up event listeners
+                dailyCall.on('joined-meeting', async () => {
+                    log(`✅ Successfully joined Daily room with ${voice || 'default'} voice!`, 'success');
+                    updateStatus(`Connected with ${voice || 'default'} voice!`, 'success');
+                    document.getElementById('disconnectBtn').disabled = false;
+                    document.getElementById('transcriptBox').style.display = 'block';
+                    
+                    const participants = await dailyCall.participants();
+                    const participantList = Object.values(participants);
+                    log(`👥 Total participants: ${participantList.length}`, 'info');
+                    
+                    let botFound = false;
+                    participantList.forEach(p => {
+                        const isLocal = p.local ? ' (YOU)' : '';
+                        const userName = p.user_name || p.user_id || 'Unknown';
+                        log(`   • ${userName}${isLocal}`, p.local ? 'info' : 'success');
+                        if (!p.local) {
+                            botFound = true;
+                        }
+                    });
+                    
+                    if (botFound) {
+                        log(`🤖 BOT DETECTED with ${voice || 'default'} voice!`, 'success');
+                        updateStatus(`Bot connected with ${voice || 'default'} voice!`, 'success');
+                    }
+                });
+                
+                dailyCall.on('participant-joined', (event) => {
+                    const isBot = !event.participant.local;
+                    const name = event.participant.user_name || event.participant.user_id || 'Unknown';
+                    log(`👤 Participant joined: ${name}${isBot ? ' 🤖 BOT' : ''}`, isBot ? 'success' : 'info');
+                });
+                
+                dailyCall.on('track-started', (event) => {
+                    if (event.track.kind === 'audio' && !event.participant.local) {
+                        const audioEl = document.getElementById('audioPlayer');
+                        audioEl.srcObject = new MediaStream([event.track]);
+                        audioEl.style.display = 'block';
+                        audioEl.volume = 1.0;
+                        audioEl.muted = false;
+                        
+                        audioEl.play().then(() => {
+                            log(`🔊 Bot audio playing with ${currentVoice || 'default'} voice!`, 'success');
+                        }).catch(err => {
+                            log(`⚠️ Autoplay blocked: ${err.message}`, 'error');
+                            log('   Click anywhere on page to enable audio!', 'error');
+                        });
+                    }
+                });
+                
+                dailyCall.on('app-message', (event) => {
+                    log(`📬 App message received: ${event.data.type}`, 'info');
+                    
+                    if (event.data.type === 'transcript') {
+                        log(`📝 Transcript [${event.data.speaker}]: ${event.data.text}`, 'success');
+                        if (event.data.voice) {
+                            log(`   Voice used: ${event.data.voice}`, 'info');
+                        }
+                        addTranscript(event.data.text, event.data.speaker);
+                    }
+                });
+                
+                dailyCall.on('error', (error) => {
+                    log(`❌ Daily error: ${error.errorMsg}`, 'error');
+                });
+                
+                dailyCall.on('left-meeting', () => {
+                    log('🚪 Left Daily room', 'info');
+                    updateStatus('Disconnected from room', 'info');
+                    document.getElementById('disconnectBtn').disabled = true;
+                });
+                
+                // CRITICAL: Start local audio BEFORE joining
+                await dailyCall.startCamera({
+                    startAudioOff: false,  // Start with audio ON
+                    startVideoOff: true    // No video needed
+                });
+                
+                // Join the room
+                await dailyCall.join({
+                    url: room_url,
+                    token: token,
+                });
+                
+                log(`✅ Audio test started with ${voice || 'default'} voice!`, 'success');
+                log('   • Say something to test the voice response', 'info');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                updateStatus('Audio test failed', 'error');
+            }
+        }
+        
+        async function disconnectAudio() {
+            if (dailyCall) {
+                log('🚪 Disconnecting from Daily room...', 'info');
+                await dailyCall.leave();
+                await dailyCall.destroy();
+                dailyCall = null;
+                currentRoom = null;
+                document.getElementById('audioPlayer').style.display = 'none';
+                document.getElementById('transcriptBox').style.display = 'none';
+                log('✅ Disconnected successfully', 'success');
+                updateStatus('Disconnected', 'info');
+                document.getElementById('disconnectBtn').disabled = true;
+            }
+        }
+        
+        function addTranscript(text, speaker) {
+            const transcriptsDiv = document.getElementById('transcripts');
+            const entry = document.createElement('div');
+            entry.className = `transcript-entry ${speaker}`;
+            
+            const speakerClass = speaker === 'user' ? 'transcript-user' : 'transcript-bot';
+            const speakerLabel = speaker === 'user' ? '👤 YOU' : '🤖 BOT';
+            const timestamp = new Date().toLocaleTimeString();
+            
+            entry.innerHTML = `
+                <div class="${speakerClass}">${speakerLabel} <span style="color: #666; font-size: 10px;">${timestamp}</span></div>
+                <div class="transcript-text">${text}</div>
+            `;
+            transcriptsDiv.appendChild(entry);
+            transcriptsDiv.scrollTop = transcriptsDiv.scrollHeight;
+        }
+        
+        function clearLogs() {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = '<div class="log-entry log-info">Logs cleared. Ready to test...</div>';
+            document.getElementById('transcripts').innerHTML = '';
+            updateStatus('Ready to test', 'info');
+        }
+        
+        // Auto-run health check and load voices on load
+        window.onload = async () => {
+            log('🚀 Backend Tester with Voice Selection initialized', 'success');
+            log(`   Backend: ${BACKEND_URL}`, 'info');
+            
+            // Load voices from backend first
+            await loadVoicesFromBackend();
+            
+            log('   Voice selection ready', 'info');
+            setTimeout(testHealth, 1000);
+        };
+    </script>
+</body>
+</html>
