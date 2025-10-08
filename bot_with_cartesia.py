@@ -21,11 +21,12 @@ try:
     from pipecat.pipeline.pipeline import Pipeline
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
-    from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
+    from pipecat.services.google.llm import GoogleLLMService
+    from pipecat.services.google.stt import GoogleSTTService
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
     from pipecat.transports.services.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-    from pipecat.processors.aggregators.llm_response import LLMFullResponseAggregator
+    from pipecat.processors.aggregators.llm_response import LLMContextAggregatorPair
     from pipecat.processors.transcript_processor import TranscriptProcessor
     from pipecat.transcriptions.language import Language
     logger.info("✅ Pipecat modules loaded successfully")
@@ -130,8 +131,14 @@ async def run_bot(
         
         # Create pipeline based on language
         if use_cartesia:
-            # DUTCH: Use Cartesia for TTS
+            # DUTCH: Use Google STT + Gemini LLM + Cartesia TTS
             logger.info("🎤 Configuring Cartesia TTS for Dutch...")
+            
+            # Create STT service
+            stt = GoogleSTTService(
+                params=GoogleSTTService.InputParams(languages=[Language.NL]),
+            )
+            logger.info("✅ Google STT configured for Dutch")
             
             # Create Cartesia TTS service
             tts = CartesiaHttpTTSService(
@@ -146,46 +153,36 @@ async def run_bot(
             )
             logger.info(f"✅ Cartesia TTS configured with voice: {CARTESIA_DUTCH_VOICES.get('default')}")
             
-            # Configure Gemini WITHOUT TTS (only STT + LLM)
-            logger.info("🧠 Configuring Gemini for STT + LLM (no TTS)...")
-            # Add models/ prefix if not present (required by Gemini API)
-            gemini_model = f"models/{model_id}" if not model_id.startswith("models/") else model_id
-            llm = GeminiMultimodalLiveLLMService(
+            # Configure Google LLM (text-only, no audio)
+            logger.info("🧠 Configuring Google Gemini LLM (text-only)...")
+            llm = GoogleLLMService(
                 api_key=GOOGLE_API_KEY,
-                model=gemini_model,
-                voice_id=None,  # DISABLE Gemini TTS
-                system_instruction=system_instruction,
-                transcribe_user_audio=True,
-                transcribe_model_audio=False,  # Don't transcribe Cartesia output
+                model=model_id,
             )
-            logger.info("✅ Gemini configured without TTS")
+            logger.info("✅ Google Gemini LLM configured")
             
             # Create context and aggregator
             messages = [{"role": "system", "content": system_instruction}]
             context = OpenAILLMContext(messages)
-            context_aggregator = llm.create_context_aggregator(context)
+            context_aggregator = LLMContextAggregatorPair(context)
             
             # Create transcript processor
             transcript = TranscriptProcessor()
             
-            # Create response aggregator to buffer streaming LLM text before TTS
-            response_aggregator = LLMFullResponseAggregator()
-            logger.info("✅ Response aggregator created to buffer streaming text")
-            
-            # Build pipeline with Cartesia TTS
-            logger.info("🔧 Creating pipeline with Cartesia TTS...")
+            # Build pipeline with Google STT + Gemini LLM + Cartesia TTS
+            logger.info("🔧 Creating pipeline with Google STT + Gemini LLM + Cartesia TTS...")
             pipeline = Pipeline([
                 transport.input(),              # Daily audio input
-                context_aggregator.user(),      # User context
+                stt,                           # Google STT
                 transcript.user(),              # Capture user transcripts
-                llm,                           # Gemini (STT+LLM only)
-                response_aggregator,           # Buffer streaming LLM text
+                context_aggregator.user(),      # User context
+                llm,                           # Google Gemini LLM (text)
                 tts,                           # Cartesia TTS
                 transport.output(),            # Daily audio output
                 transcript.assistant(),        # Capture bot transcripts
                 context_aggregator.assistant(), # Assistant context
             ])
-            logger.info("✅ Pipeline created with Cartesia TTS and response buffering")
+            logger.info("✅ Pipeline created with Google STT + Gemini LLM + Cartesia TTS")
             
         else:
             # OTHER LANGUAGES: Use Gemini for everything
