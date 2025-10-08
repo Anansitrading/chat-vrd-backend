@@ -5,40 +5,23 @@ Only includes models that actually support bidiGenerateContent for Live API
 Tested and verified: 2025-01-08
 """
 
-# WORKING MODELS - Only models that support bidiGenerateContent WebSocket API
-# These are the ONLY models that work with Cartesia Dutch TTS
+# WORKING MODEL - VERIFIED with Google API
+# Only gemini-2.0-flash-exp actually supports bidiGenerateContent
+# All other models FAIL despite what documentation says
 WORKING_MODELS = {
     "gemini-2.0-flash-exp": {
         "name": "Gemini 2.0 Flash Exp",
         "type": "native-audio",
-        "description": "✅ WORKS with Live API - Best for testing",
+        "description": "✅ ONLY MODEL THAT WORKS - Verified via API",
         "features": ["bidiGenerateContent", "streaming", "interruption", "low_latency"],
         "tier": "free"
-    },
-    "gemini-2.0-flash-live-001": {
-        "name": "Gemini 2.0 Flash Live",
-        "type": "native-audio",
-        "description": "✅ WORKS with Live API - Stable production",
-        "features": ["bidiGenerateContent", "streaming", "interruption", "low_latency", "production"],
-        "tier": "free"
-    },
-    "gemini-live-2.5-flash": {
-        "name": "Gemini Live 2.5 Flash",
-        "type": "native-audio",
-        "description": "✅ WORKS with Live API - Best quality",
-        "features": ["bidiGenerateContent", "native_audio", "all_voices", "production_ready"],
-        "tier": "paid_ga"
-    },
-    "gemini-live-2.5-flash-preview-native-audio-09-2025": {
-        "name": "Gemini Live 2.5 Flash Preview",
-        "type": "native-audio",
-        "description": "✅ WORKS with Live API - Latest features",
-        "features": ["bidiGenerateContent", "native_audio", "all_voices", "preview"],
-        "tier": "paid"
     }
 }
 
-# REMOVED - These models DO NOT support bidiGenerateContent:
+# REMOVED - ALL OF THESE FAIL WITH bidiGenerateContent:
+# - gemini-2.0-flash-live-001 (claimed to work, DOESN'T)
+# - gemini-live-2.5-flash (claimed to work, DOESN'T)
+# - gemini-live-2.5-flash-preview-native-audio-09-2025 (claimed to work, DOESN'T)
 # - gemini-2.5-flash (no WebSocket support)
 # - gemini-2.0-flash (no WebSocket support)
 # - gemini-2.5-flash-preview-native-audio-dialog (wrong API endpoint)
