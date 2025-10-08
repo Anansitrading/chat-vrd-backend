@@ -26,7 +26,6 @@ try:
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
     from pipecat.transports.services.daily import DailyParams, DailyTransport
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
-    from pipecat.processors.aggregators.llm_response import LLMContextAggregatorPair
     from pipecat.processors.transcript_processor import TranscriptProcessor
     from pipecat.transcriptions.language import Language
     logger.info("✅ Pipecat modules loaded successfully")
@@ -164,7 +163,7 @@ async def run_bot(
             # Create context and aggregator
             messages = [{"role": "system", "content": system_instruction}]
             context = OpenAILLMContext(messages)
-            context_aggregator = LLMContextAggregatorPair(context)
+            context_aggregator = llm.create_context_aggregator(context)
             
             # Create transcript processor
             transcript = TranscriptProcessor()
