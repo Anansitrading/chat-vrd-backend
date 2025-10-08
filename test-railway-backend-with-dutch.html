@@ -366,10 +366,16 @@
         function updateLanguageInfo() {
             const language = document.getElementById('languageSelect').value;
             const ttsInfo = document.getElementById('ttsInfo');
+            const modelId = document.getElementById('modelSelect').value;
             
             if (language === 'nl-NL') {
                 if (isCartesiaAvailable) {
                     ttsInfo.innerHTML = '🇳🇱 Dutch will use <span class="tts-badge cartesia">Cartesia TTS</span> for native accent';
+                    
+                    // Warn about model compatibility
+                    if (currentModel && currentModel.type === 'half-cascade') {
+                        ttsInfo.innerHTML += '<br>⚠️ <strong>Use a native-audio model for best results!</strong>';
+                    }
                 } else {
                     ttsInfo.innerHTML = '⚠️ Cartesia not configured - Dutch will use <span class="tts-badge gemini">Gemini TTS</span>';
                 }
