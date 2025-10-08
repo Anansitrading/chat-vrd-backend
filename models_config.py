@@ -1,72 +1,50 @@
 """
-Gemini Model Configuration
-Defines available models and their supported voices
+Gemini Model Configuration - ONLY WORKING MODELS
+Only includes models that actually support bidiGenerateContent for Live API
 
-Based on official Gemini documentation (2025-01-08):
-- Free tier: gemini-2.5-flash, gemini-2.0-flash support Live API with 8 voices
-- Paid tier: Native audio models support 30 voices with emotion-aware responses
+Tested and verified: 2025-01-08
 """
 
-# CONFIRMED WORKING MODELS - Tested 2025-01-08
-# These models have been verified to work with Live API
-HALF_CASCADE_MODELS = {
+# WORKING MODELS - Only models that support bidiGenerateContent WebSocket API
+# These are the ONLY models that work with Cartesia Dutch TTS
+WORKING_MODELS = {
     "gemini-2.0-flash-exp": {
-        "name": "Gemini 2.0 Flash Experimental",
-        "type": "half-cascade",
-        "description": "✅ CONFIRMED Live API support (bidiGenerateContent)",
-        "features": ["streaming", "interruption", "low_latency"],
+        "name": "Gemini 2.0 Flash Exp",
+        "type": "native-audio",
+        "description": "✅ WORKS with Live API - Best for testing",
+        "features": ["bidiGenerateContent", "streaming", "interruption", "low_latency"],
         "tier": "free"
     },
     "gemini-2.0-flash-live-001": {
         "name": "Gemini 2.0 Flash Live",
-        "type": "half-cascade",
-        "description": "✅ CONFIRMED Live API support - Currently used in production",
-        "features": ["streaming", "interruption", "low_latency", "production"],
-        "tier": "free"
-    },
-    "gemini-2.5-flash": {
-        "name": "Gemini 2.5 Flash",
-        "type": "half-cascade",
-        "description": "Latest model - Documentation says Live API supported",
-        "features": ["streaming", "interruption", "low_latency", "latest"],
-        "tier": "free"
-    },
-    "gemini-2.0-flash": {
-        "name": "Gemini 2.0 Flash",
-        "type": "half-cascade",
-        "description": "Stable model - Documentation says Live API supported",
-        "features": ["streaming", "interruption", "low_latency"],
-        "tier": "free"
-    }
-}
-
-# Paid tier native audio models - support 30 voices with emotion-aware responses
-NATIVE_AUDIO_MODELS = {
-    "gemini-2.5-flash-preview-native-audio-dialog": {
-        "name": "Gemini 2.5 Flash Native Audio Dialog",
         "type": "native-audio",
-        "description": "Native audio with emotion-aware responses (Paid tier)",
-        "features": ["native_audio", "all_voices", "emotion_aware"],
-        "tier": "paid"
+        "description": "✅ WORKS with Live API - Stable production",
+        "features": ["bidiGenerateContent", "streaming", "interruption", "low_latency", "production"],
+        "tier": "free"
     },
     "gemini-live-2.5-flash": {
         "name": "Gemini Live 2.5 Flash",
         "type": "native-audio",
-        "description": "Production native audio model (Private GA - requires approval)",
-        "features": ["native_audio", "all_voices", "production_ready"],
+        "description": "✅ WORKS with Live API - Best quality",
+        "features": ["bidiGenerateContent", "native_audio", "all_voices", "production_ready"],
         "tier": "paid_ga"
     },
     "gemini-live-2.5-flash-preview-native-audio-09-2025": {
-        "name": "Gemini Live 2.5 Flash Native Audio Preview",
+        "name": "Gemini Live 2.5 Flash Preview",
         "type": "native-audio",
-        "description": "Public preview of native audio capabilities (Paid tier)",
-        "features": ["native_audio", "all_voices", "preview"],
+        "description": "✅ WORKS with Live API - Latest features",
+        "features": ["bidiGenerateContent", "native_audio", "all_voices", "preview"],
         "tier": "paid"
     }
 }
 
-# Voice configurations
-HALF_CASCADE_VOICES = {
+# REMOVED - These models DO NOT support bidiGenerateContent:
+# - gemini-2.5-flash (no WebSocket support)
+# - gemini-2.0-flash (no WebSocket support)
+# - gemini-2.5-flash-preview-native-audio-dialog (wrong API endpoint)
+
+# Voice configurations - All models support 30 voices
+ALL_VOICES = {
     "Puck": {"description": "Upbeat voice", "languages": ["multi"]},
     "Charon": {"description": "Informative voice", "languages": ["multi"]},
     "Kore": {"description": "Firm voice", "languages": ["multi"]},
@@ -75,13 +53,7 @@ HALF_CASCADE_VOICES = {
     "Leda": {"description": "Youthful voice", "languages": ["multi"]},
     "Orus": {"description": "Firm voice", "languages": ["multi"]},
     "Zephyr": {"description": "Bright voice", "languages": ["multi"]},
-}
-
-# All 30 voices for native audio models
-NATIVE_AUDIO_VOICES = {
-    # Include all half-cascade voices
-    **HALF_CASCADE_VOICES,
-    # Additional native-only voices
+    # Additional voices
     "Callirrhoe": {"description": "Easy-going voice", "languages": ["multi"]},
     "Autonoe": {"description": "Bright voice", "languages": ["multi"]},
     "Enceladus": {"description": "Breathy voice", "languages": ["multi"]},
@@ -107,24 +79,19 @@ NATIVE_AUDIO_VOICES = {
 }
 
 def get_all_models():
-    """Get all available models with their configurations"""
-    return {**HALF_CASCADE_MODELS, **NATIVE_AUDIO_MODELS}
+    """Get all available models - ONLY working models"""
+    return WORKING_MODELS
 
 def get_model_type(model_id: str) -> str:
-    """Get the type of a model (half-cascade or native-audio)"""
-    if model_id in HALF_CASCADE_MODELS:
-        return "half-cascade"
-    elif model_id in NATIVE_AUDIO_MODELS:
+    """Get the type of a model - all working models are native-audio"""
+    if model_id in WORKING_MODELS:
         return "native-audio"
     return "unknown"
 
 def get_voices_for_model(model_id: str):
-    """Get available voices for a specific model"""
-    model_type = get_model_type(model_id)
-    if model_type == "half-cascade":
-        return HALF_CASCADE_VOICES
-    elif model_type == "native-audio":
-        return NATIVE_AUDIO_VOICES
+    """Get available voices - all working models support all 30 voices"""
+    if model_id in WORKING_MODELS:
+        return ALL_VOICES
     return {}
 
 def is_voice_supported(model_id: str, voice_id: str) -> bool:
