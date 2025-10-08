@@ -1,2 +1,9 @@
-[phases.setup]
-nixPkgs = ["ffmpeg"]
+# Nix packages available during build & runtime
+[nix]
+pkgs = ["python3", "ffmpeg"]
+
+# Ensure the Python provider's install step uses python3 explicitly
+[phases.install]
+cmds = [
+  "python3 -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"
+]
