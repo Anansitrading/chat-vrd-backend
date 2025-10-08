@@ -21,16 +21,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import bot module - make it optional to prevent startup failures
+# Import bot modules - make them optional to prevent startup failures
 try:
     from bot import run_bot
     BOT_AVAILABLE = True
-    logger.info("✅ Bot module loaded successfully")
+    logger.info("✅ Standard bot module loaded successfully")
 except Exception as e:
-    logger.warning(f"⚠️  Bot module failed to import: {e}")
+    logger.warning(f"⚠️  Standard bot module failed to import: {e}")
     logger.warning("⚠️  Server will start but /connect endpoint will be unavailable")
     BOT_AVAILABLE = False
     run_bot = None
+
+# Try to import Cartesia bot for Dutch support
+try:
+    from bot_with_cartesia import run_bot as run_bot_cartesia
+    CARTESIA_BOT_AVAILABLE = True
+    logger.info("✅ Cartesia bot module loaded successfully")
+except Exception as e:
+    logger.warning(f"⚠️  Cartesia bot module failed to import: {e}")
+    logger.warning("⚠️  Dutch language will use standard Gemini TTS")
+    CARTESIA_BOT_AVAILABLE = False
+    run_bot_cartesia = None
 
 # Initialize FastAPI
 app = FastAPI(title="Chat-VRD Pipecat Backend")
@@ -47,11 +58,14 @@ app.add_middleware(
 # Environment variables
 DAILY_API_KEY = os.getenv("DAILY_API_KEY")
 DAILY_API_URL = "https://api.daily.co/v1"
+CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY")
 
 # Log environment status on startup
 logger.info(f"🔧 Daily API configured: {bool(DAILY_API_KEY)}")
 logger.info(f"🔧 Google API configured: {bool(os.getenv('GOOGLE_API_KEY'))}")
-logger.info(f"🔧 Bot module available: {BOT_AVAILABLE}")
+logger.info(f"🔧 Cartesia API configured: {bool(CARTESIA_API_KEY)}")
+logger.info(f"🔧 Standard bot available: {BOT_AVAILABLE}")
+logger.info(f"🔧 Cartesia bot available: {CARTESIA_BOT_AVAILABLE}")
 
 # Track active bots and their ready events
 active_bots = {}
@@ -183,7 +197,10 @@ async def health_check():
         "version": "1.0.0",
         "daily_api_configured": bool(DAILY_API_KEY),
         "google_api_configured": bool(os.getenv("GOOGLE_API_KEY")),
+        "cartesia_api_configured": bool(CARTESIA_API_KEY),
         "bot_available": BOT_AVAILABLE,
+        "cartesia_bot_available": CARTESIA_BOT_AVAILABLE,
+        "models_available": True,  # For compatibility with frontend
     }
 
 
@@ -216,11 +233,29 @@ async def connect(request: ConnectRequest):
         ready_event = asyncio.Event()
         bot_ready_events[room_name] = ready_event
         
-        # CRITICAL: Spawn bot task to join the room
-        logger.info(f"Spawning bot for room: {room_name} with voice: {request.voice_id or 'auto'}")
-        bot_task = asyncio.create_task(
-            run_bot(room_url, bot_token, request.language, ready_event, request.voice_id)
+        # CRITICAL: Choose bot based on language
+        # Use Cartesia bot for Dutch if available and API key is configured
+        use_cartesia = (
+            request.language == "nl-NL" and 
+            CARTESIA_BOT_AVAILABLE and 
+            CARTESIA_API_KEY
         )
+        
+        if use_cartesia:
+            logger.info(f"🇳🇱 Using Cartesia bot for Dutch language")
+            logger.info(f"Spawning Cartesia bot for room: {room_name} with voice: {request.voice_id or 'auto'}")
+            bot_task = asyncio.create_task(
+                run_bot_cartesia(room_url, bot_token, request.language, ready_event, request.voice_id)
+            )
+            bot_status = "cartesia_bot_spawned"
+        else:
+            if request.language == "nl-NL":
+                logger.warning(f"⚠️  Dutch requested but using Gemini (Cartesia not available)")
+            logger.info(f"Spawning standard bot for room: {room_name} with voice: {request.voice_id or 'auto'}")
+            bot_task = asyncio.create_task(
+                run_bot(room_url, bot_token, request.language, ready_event, request.voice_id)
+            )
+            bot_status = "standard_bot_spawned"
         
         # Track the bot task
         active_bots[room_name] = bot_task
@@ -243,6 +278,17 @@ async def connect(request: ConnectRequest):
         return {
             "room_url": room_url,
             "token": client_token,
+            "language": request.language,
+            "bot_status": bot_status,
+            "model": {
+                "id": "gemini-live-2.5-flash",
+                "name": "Gemini Live 2.5 Flash",
+                "type": "native-audio"
+            },
+            "voice": {
+                "id": request.voice_id or "Puck",
+                "description": "Selected voice"
+            }
         }
     
     except Exception as e:
