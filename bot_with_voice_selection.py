@@ -40,53 +40,178 @@ except ImportError as e:
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Available Gemini Live voices
-# Based on Google's documentation for Gemini 2.0
+# Based on Google's documentation: https://ai.google.dev/gemini-api/docs/speech-generation#voices
+# ALL 30 voices are supported by Gemini 2.5 Flash/Pro TTS
 GEMINI_VOICES = {
-    # Primary voices
+    "Zephyr": {
+        "name": "Zephyr",
+        "description": "Bright voice",
+        "languages": ["en-US", "multi"]
+    },
     "Puck": {
         "name": "Puck",
-        "description": "Natural, friendly voice",
+        "description": "Upbeat voice",
         "languages": ["en-US", "multi"]
     },
     "Charon": {
         "name": "Charon", 
-        "description": "Professional, clear voice",
+        "description": "Informative voice",
         "languages": ["en-US", "en-GB", "multi"]
     },
     "Kore": {
         "name": "Kore",
-        "description": "Warm, conversational voice", 
+        "description": "Firm voice", 
         "languages": ["en-US", "multi"]
     },
     "Fenrir": {
         "name": "Fenrir",
-        "description": "Deep, authoritative voice",
+        "description": "Excitable voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Leda": {
+        "name": "Leda",
+        "description": "Youthful voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Orus": {
+        "name": "Orus",
+        "description": "Firm voice",
         "languages": ["en-US", "multi"]
     },
     "Aoede": {
         "name": "Aoede",
-        "description": "Bright, expressive voice",
+        "description": "Breezy voice",
         "languages": ["en-US", "multi"]
     },
-    # Additional voices that may be available
+    "Callirrhoe": {
+        "name": "Callirrhoe",
+        "description": "Easy-going voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Autonoe": {
+        "name": "Autonoe",
+        "description": "Bright voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Enceladus": {
+        "name": "Enceladus",
+        "description": "Breathy voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Iapetus": {
+        "name": "Iapetus",
+        "description": "Clear voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Umbriel": {
+        "name": "Umbriel",
+        "description": "Easy-going voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Algieba": {
+        "name": "Algieba",
+        "description": "Smooth voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Despina": {
+        "name": "Despina",
+        "description": "Smooth voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Erinome": {
+        "name": "Erinome",
+        "description": "Clear voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Algenib": {
+        "name": "Algenib",
+        "description": "Gravelly voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Rasalgethi": {
+        "name": "Rasalgethi",
+        "description": "Informative voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Laomedeia": {
+        "name": "Laomedeia",
+        "description": "Upbeat voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Achernar": {
+        "name": "Achernar",
+        "description": "Soft voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Alnilam": {
+        "name": "Alnilam",
+        "description": "Firm voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Schedar": {
+        "name": "Schedar",
+        "description": "Even voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Gacrux": {
+        "name": "Gacrux",
+        "description": "Mature voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Pulcherrima": {
+        "name": "Pulcherrima",
+        "description": "Forward voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Achird": {
+        "name": "Achird",
+        "description": "Friendly voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Zubenelgenubi": {
+        "name": "Zubenelgenubi",
+        "description": "Casual voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Vindemiatrix": {
+        "name": "Vindemiatrix",
+        "description": "Gentle voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Sadachbia": {
+        "name": "Sadachbia",
+        "description": "Lively voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Sadaltager": {
+        "name": "Sadaltager",
+        "description": "Knowledgeable voice",
+        "languages": ["en-US", "multi"]
+    },
+    "Sulafat": {
+        "name": "Sulafat",
+        "description": "Warm voice",
+        "languages": ["en-US", "multi"]
+    },
+    # Legacy voices that might not work with Gemini Live API
     "Orbit": {
         "name": "Orbit",
-        "description": "Modern, dynamic voice",
+        "description": "Modern, dynamic voice (legacy)",
         "languages": ["en-US", "multi"]
     },
     "Perseus": {
         "name": "Perseus",
-        "description": "Strong, confident voice",
+        "description": "Strong, confident voice (legacy)",
         "languages": ["en-US", "multi"]
     },
     "Perse": {
         "name": "Perse",
-        "description": "Gentle, soothing voice",
+        "description": "Gentle, soothing voice (legacy)",
         "languages": ["en-US", "multi"]
     },
     "Io": {
         "name": "Io",
-        "description": "Clear, articulate voice",
+        "description": "Clear, articulate voice (legacy)",
         "languages": ["en-US", "multi"]
     }
 }
