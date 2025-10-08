@@ -238,6 +238,44 @@ async def health_check():
     }
 
 
+@app.get("/debug/gemini-models")
+async def debug_gemini_models():
+    """Check what models are actually available from Google's API with our key"""
+    google_key = os.getenv("GOOGLE_API_KEY")
+    if not google_key:
+        raise HTTPException(500, "GOOGLE_API_KEY not configured")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"https://generativelanguage.googleapis.com/v1beta/models?key={google_key}"
+            ) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    return {"error": text, "status": response.status}
+                
+                data = await response.json()
+                
+                # Filter to only models that support bidiGenerateContent
+                live_models = []
+                for model in data.get("models", []):
+                    methods = model.get("supportedGenerationMethods", [])
+                    if "bidiGenerateContent" in methods:
+                        live_models.append({
+                            "name": model["name"],
+                            "displayName": model.get("displayName", ""),
+                            "supportedGenerationMethods": methods
+                        })
+                
+                return {
+                    "total_models": len(data.get("models", [])),
+                    "live_api_models": live_models,
+                    "live_api_count": len(live_models)
+                }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/models")
 async def list_models():
     """Get list of available models with their voice configurations"""
