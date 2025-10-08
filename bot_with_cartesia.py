@@ -24,7 +24,7 @@ try:
     from pipecat.services.google.llm import GoogleLLMService
     from pipecat.services.deepgram.stt import DeepgramSTTService
     from pipecat.services.cartesia.tts import CartesiaHttpTTSService
-    from pipecat.transports.daily import DailyParams, DailyTransport
+    from pipecat.transports.daily.transport import DailyTransport, DailyParams
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
     from pipecat.processors.transcript_processor import TranscriptProcessor
     from pipecat.transcriptions.language import Language

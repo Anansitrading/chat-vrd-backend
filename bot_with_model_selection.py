@@ -25,7 +25,7 @@ try:
     from pipecat.pipeline.runner import PipelineRunner
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     from pipecat.services.gemini_multimodal_live.gemini import GeminiMultimodalLiveLLMService
-    from pipecat.transports.daily import DailyParams, DailyTransport
+    from pipecat.transports.daily.transport import DailyTransport, DailyParams
     from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
     from pipecat.processors.transcript_processor import TranscriptProcessor
     logger.info("✅ Pipecat modules loaded successfully")
